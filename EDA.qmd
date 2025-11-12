@@ -1,0 +1,103 @@
+---
+title: "EDA"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+# Load necessary libraries
+# install.packages(c("vroom", "dplyr", "tidyr", "ggplot2", "patchwork"))
+library(vroom)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(patchwork) # For combining plots
+
+# --- 1. Load Data ---
+# Load the data and convert 'type' and 'color' to factors for analysis
+dat_train <- vroom("train.csv") %>%
+  mutate(
+    type = as.factor(type),
+    color = as.factor(color)
+  )
+
+# --- 2. Numeric Predictors vs. 'type' ---
+
+# First, let's get a summary table
+# We group by 'type' and get the mean for each numeric predictor
+numeric_summary <- dat_train %>%
+  select(bone_length, rotting_flesh, hair_length, has_soul, type) %>%
+  group_by(type) %>%
+  summarise(
+    across(everything(), mean), # Get the mean for all numeric columns
+    .groups = "drop"
+  )
+
+print("--- Numeric Summary by Type (Mean) ---")
+print(numeric_summary)
+
+# Second, let's plot them.
+# We pivot the data into a "long" format to plot all 4 variables at once.
+numeric_plot <- dat_train %>%
+  select(bone_length, rotting_flesh, hair_length, has_soul, type) %>%
+  pivot_longer(
+    cols = -type, # Select all columns *except* 'type'
+    names_to = "predictor",
+    values_to = "value"
+  ) %>%
+  
+  # Now, create the boxplots
+  ggplot(aes(x = type, y = value, fill = type)) +
+  geom_boxplot() +
+  facet_wrap(~ predictor, scales = "free_y") + # Create a separate plot for each predictor
+  labs(
+    title = "Numeric Predictors by Monster Type",
+    x = "Monster Type",
+    y = "Value"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") # Hide legend, as X-axis is clear
+
+
+# --- 3. Categorical Predictor ('color') vs. 'type' ---
+
+# First, a summary table of counts
+categorical_summary <- dat_train %>%
+  count(color, type) %>%
+  pivot_wider(names_from = type, values_from = n, values_fill = 0)
+
+print("--- Categorical Summary by Type (Counts) ---")
+print(categorical_summary)
+
+
+# Second, a plot.
+# A filled bar chart is perfect for seeing proportions.
+categorical_plot <- dat_train %>%
+  ggplot(aes(x = color, fill = type)) +
+  # position = "fill" makes each bar go to 100%
+  geom_bar(position = "fill") + 
+  scale_y_continuous(labels = scales::percent) + # Show Y-axis as %
+  labs(
+    title = "Proportion of Monster Type by Color",
+    x = "Color",
+    y = "Proportion",
+    fill = "Monster Type"
+  ) +
+  theme_minimal()
+
+
+# --- 4. Combine and Show Plots ---
+# We use 'patchwork' to combine our two plots into one image
+# (numeric_plot / categorical_plot) 
+# This command will display the combined plot in your RStudio Plots pane.
+
+print("Displaying combined plots...")
+print(numeric_plot / categorical_plot)
+
+# To save the combined plot:
+# ggsave("eda_combined_plot.png", 
+#        (numeric_plot / categorical_plot), 
+#        width = 10, height = 12)
+```
+
