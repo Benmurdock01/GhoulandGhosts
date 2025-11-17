@@ -6,7 +6,7 @@ library(embed)
 #import data
 data_train <- vroom("./train.csv") %>%
   mutate(type = as.factor(type))
-data_test <- vroom("./test.csv")
+data_test <- vroom("./test.csv")a
 
 #recipe
 rf_recipe <- recipe(type ~ ., data = data_train) %>%
